@@ -1,0 +1,44 @@
+name: Repthon Workflow
+
+on:
+    push:
+    workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+       - name: Checkout
+         uses: actions/checkout@main
+
+       - uses: styfle/cancel-workflow-action@0.9.0
+         name: "Cancel duplicate workflow runs"
+         with:
+            all_but_latest: true
+            access_token: ${{ github.token }}
+       - name: initialization
+         continue-on-error: true
+         run: |
+           git config --global user.name ${{ secrets.NAME }}
+           git config --global user.email ${{ secrets.EMAIL }}
+           git config --global credential.helper store
+           echo "https://${{ secrets.NAME }}:${{ secrets.TOKEN }}@github.com" > ~/.git-credentials
+       - name: cloning Repthon
+         continue-on-error: true
+         run: |
+           git clone https://${{ secrets.NAME }}:${{ secrets.TOKEN }}@${{ secrets.REPO }} RepthonAr
+       - name: Running Repthon
+         timeout-minutes: 120
+         continue-on-error: true
+         run: |
+           sudo sh Repthon.sh
+       - name: Loop deploy
+         continue-on-error: true
+         run: |
+              git clone https://github.com/${GITHUB_REPOSITORY} loop
+              cd loop || exit 1
+              echo $(date -u +%T%P) >> loop.txt
+              git add loop.txt
+              git commit -m "Workflow : Loop $(date -u +%D-%T%P)"
+              git push -q https://${{ secrets.TOKEN }}@github.com/${GITHUB_REPOSITORY} HEAD:Repthon
